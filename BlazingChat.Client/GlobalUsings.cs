@@ -1,0 +1,9 @@
+﻿global using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.AspNetCore.Hosting;
+global using Microsoft.AspNetCore.Hosting.Internal;
+global using BlazingChat.Components;
+global using BlazingChat.Shared.Extensions;
+global using BlazingChat.Shared;
+global using BlazingChat.Services.Extensions;

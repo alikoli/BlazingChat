@@ -1,0 +1,59 @@
+﻿@inject HttpClient _httpClient
+@inject NavigationManager _navigationManager
+@inject IAccessTokenService _accessTokenService
+
+<IonHeader>
+    <IonToolbar color="primary">
+        <IonTitle>Menu</IonTitle>
+    </IonToolbar>
+</IonHeader>
+
+<IonContent>
+    <IonList>
+        <IonListHeader>
+            Navigate
+        </IonListHeader>
+        <IonMenuToggle auto-hide="false">
+            <IonItem href="./profile" Match="NavLinkMatch.All">
+                <IonIcon slot="start" name="person-circle"></IonIcon>
+                <IonLabel>Profile</IonLabel>
+            </IonItem>
+            <IonItem href="/contacts">
+                <IonIcon slot="start" name="people"></IonIcon>
+                <IonLabel>Contacts</IonLabel>
+            </IonItem>
+            <IonItem href="/Settings">
+                <IonIcon slot="start" name="settings"></IonIcon>
+                <IonLabel>Settings</IonLabel>
+            </IonItem>
+            <AuthorizeView Roles="admin">
+                <IonItem href="/assignroles">
+                    <IonIcon slot="start" name="people-circle"></IonIcon>
+                    <IonLabel>Assign Roles</IonLabel>
+                </IonItem>
+            </AuthorizeView>
+            <IonItem href="https://www.patreon.com/curiousdrive" >
+                <IonIcon slot="start" name="logo-usd"></IonIcon>
+                <IonLabel>Donate</IonLabel>
+            </IonItem>
+            <IonItem href="https://github.com/CuriousDrive/BlazingChat" >
+                <IonIcon slot="start" name="logo-github"></IonIcon>
+                <IonLabel>Source Code</IonLabel>
+            </IonItem>
+            <IonItem @onclick="Logout">
+                <IonIcon slot="start" name="log-out"></IonIcon>
+                <IonLabel>Logout</IonLabel>
+            </IonItem>
+        </IonMenuToggle>
+    </IonList>
+</IonContent>
+
+
+@code {
+
+    private async Task Logout()
+    {
+        await _accessTokenService.RemoveAccessTokenAsync("jwt_token");
+        _navigationManager.NavigateTo("/", true);
+    }
+}

@@ -1,0 +1,18 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+
+<IonToast Visible=true duration="@ToastSettings.Duration"
+          position="@ToastSettings.Position"
+          @onclick="ToastClick"
+          color="@ToastSettings.Color"
+          message="@ToastSettings.Message"
+          icon="alert-circle"
+          header="@ToastSettings.Heading"
+          cssClass="@ToastSettings.AdditionalClasses"
+>
+      </IonToast>
+@*<div>Message: @ToastSettings.Message</div>
+<IonToast Visible=true color="dark" duration="2000" message=@ToastSettings.Message />
+<ion-icon name="alert-circle"></ion-icon>
+*@
+
+@*<IonToast Visible=true color="dark" duration="2000" message="paired successfully 2" />*@

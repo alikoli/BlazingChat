@@ -1,0 +1,38 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@namespace BlazingChat.Mobile.Server.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="~/" />
+   
+    <link href="_content/BlazingChat.Mobile.Components/css/app.css" rel="stylesheet" />
+    <link href="_content/Radzen.Blazor/css/default-base.css" rel="stylesheet">
+    <link href="_content/BlazorPro.Spinkit/spinkit.min.css" rel="stylesheet" />
+    <link href="BlazingChat.Mobile.Server.styles.css" rel="stylesheet" />
+
+    <script type="module" src="_content/BlazingChat.Mobile.Components/js/ionic/ionic.esm.js"></script>
+    <script nomodule src="_content/BlazingChat.Mobile.Components/js/ionic/ionic.js"></script>
+    <link href="_content/BlazingChat.Mobile.Components/css/ionic/ionic.bundle.css" rel="stylesheet" />
+    <script src="_content/BlazorIonic/ionic-bridge.js"></script>
+
+
+    <component type="typeof(HeadOutlet)" render-mode="Server" />
+
+    <style>
+        :root {
+            --ion-safe-area-top: 20px;
+            --ion-safe-area-bottom: 22px;
+        }
+    </style>
+</head>
+<body>
+    @RenderBody()
+
+    <script src="_framework/blazor.server.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+﻿@page "/profile"
+
+@using System.Security.Claims
+
+@inject IProfileViewModel _profileViewModel
+@inject NavigationManager _navigationManager
+@inject IJSRuntime _jsRuntime
+@inject HttpClient _httpClient
+@inject IToastService _toastService
+@inject UIStateService UiStateService
+
+<IonContent fullscreen>
+    <div id="profile-bg"></div>
+    <div id="content">
+        <div id="profile-info">
+            <img id="profile-image" src="@_profileViewModel.ProfilePicDataUrl">
+            <h3 id="profile-name">@_profileViewModel.FirstName @_profileViewModel.LastName</h3>
+            <span id="profile-description">
+                @_profileViewModel.EmailAddress
+            </span>
+        </div>
+        <IonList>
+            <IonItem>
+                <IonLabel position="stacked">Profile picture</IonLabel>
+                <InputFile OnChange="@OnInputFileChanged" class="btn-2"></InputFile>
+            </IonItem>
+            <IonItem>
+                <IonLabel position="stacked">First name</IonLabel>
+                <IonInput TItem="string" @bind-Value="_profileViewModel.FirstName" placeholder="first name"></IonInput>
+            </IonItem>
+
+            <IonItem>
+                <IonLabel position="stacked">Last name</IonLabel>
+                <IonInput TItem="string" @bind-Value="_profileViewModel.LastName" placeholder="first name"></IonInput>
+            </IonItem>
+
+            <IonItem>
+                <IonLabel position="stacked">Email address</IonLabel>
+                <IonInput TItem="string" @bind-Value="_profileViewModel.EmailAddress" placeholder="first name"></IonInput>
+            </IonItem>
+            <IonItem>
+                <IonLabel position="stacked">About me</IonLabel>
+                <IonTextArea TItem="string" @bind-Value="_profileViewModel.AboutMe" placeholder="first name"></IonTextArea>
+            </IonItem>
+            <IonItem>
+                <IonButton disabled="@(!IsUserAuthorized)" @onclick="UpdateProfile" color="primary">Save</IonButton>
+                <IonButton disabled="@(!IsUserAuthorized)" @onclick="DownloadProfilePicture" color="primary">Download Picture</IonButton>
+            </IonItem>
+        </IonList>
+    </div>
+
+    <ActivateMessage></ActivateMessage>
+
+</IonContent>
+
+@code {
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; }
+
+    private bool IsLoading { get; set; } = true;
+    private bool IsUserAuthorized { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        UiStateService.Title = "Profile";
+        var authState = await AuthenticationState;
+        var user = authState.User;
+
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            var claim = user.FindFirst(c => c.Type == ClaimTypes.NameIdentifier);
+            _profileViewModel.UserId = Convert.ToInt64(claim?.Value);
+            IsUserAuthorized = user.IsInRole("admin") || user.IsInRole("general");
+
+            try
+            {
+                await _profileViewModel.GetProfile();
+
+                if (_profileViewModel.ProfilePicDataUrl == null)
+                {
+                    _profileViewModel.ProfilePicDataUrl = "_content/BlazingChat.Mobile.Components/img/profile_pic.jpg";
+                    Console.WriteLine(_profileViewModel.ProfilePicDataUrl);
+                }
+                IsLoading = false;
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                //_navigationManager.NavigateTo("/", true);
+            }
+        }
+        else
+        {
+            _navigationManager.NavigateTo("/");
+        }
+    }
+    private async Task OnInputFileChanged(InputFileChangeEventArgs inputFileChangeEvent)
+    {
+        //get the file
+        var file = inputFileChangeEvent.File;
+
+        //read that file in a byte array
+        var buffer = new byte[file.Size];
+        await file.OpenReadStream(1512000).ReadAsync(buffer);
+
+        //convert byte array to base 64 string
+        _profileViewModel.ProfilePicDataUrl = $"data:image/png;base64,{Convert.ToBase64String(buffer)}";
+    }
+
+    private async Task DownloadProfilePicture()
+    {
+        var base64String = _profileViewModel.ProfilePicDataUrl.Split(',')[1];
+
+        var module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazingChat.Mobile.Components/js/site.js");
+        await module.InvokeVoidAsync("downloadFile", "image/png", base64String, "profile.png");
+    }
+
+    private async Task DownloadServerFile()
+    {
+        //get base64 string from web api call
+        var httpResponseMessage = await _httpClient.GetAsync("user/DownloadServerFile");
+        var base64String = await httpResponseMessage.Content.ReadAsStringAsync();
+
+        //call javascript function to download the file
+        await _jsRuntime.InvokeVoidAsync(
+            "downloadFile",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            base64String,
+            "document.docx");
+    }
+
+    private async Task UpdateProfile()
+    {
+        await _profileViewModel.UpdateProfile();
+        _toastService.ShowSuccess("Profile info has been saved successfully.");
+    }
+}

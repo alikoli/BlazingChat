@@ -1,0 +1,7 @@
+@namespace Blazor.Ionic
+@inherits BaseIonicAnchorRenderableComponent
+<ion-item-option
+    @attributes="InputAttributes"
+     @onclick='OnClickCallback' @onclick:preventDefault="@ShouldInterceptHref">
+    @ChildContent
+</ion-item-option>

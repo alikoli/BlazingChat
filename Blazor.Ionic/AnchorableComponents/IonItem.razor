@@ -1,0 +1,129 @@
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@using System.Linq.Expressions
+@namespace Blazor.Ionic
+@inherits BaseIonicAnchorRenderableComponent
+@implements IBaseIonicValidationComponent
+@inject IJSRuntime _jsRuntime
+<ion-item
+    @ref="_element"
+    @attributes="InputAttributes"
+    @onclick='OnClickCallback' @onclick:preventDefault="@ShouldInterceptHref">
+        @ChildContent
+</ion-item>
+
+@code
+{
+    private readonly Queue<Func<Task>> _renderActions = new Queue<Func<Task>>();
+    private ElementReference _element;
+
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        if (EditContext != null)
+        {
+            EditContext.OnValidationStateChanged += EditContextOnOnValidationStateChanged;
+        }
+        EditContextChanging = newEditContext =>
+        {
+            if (EditContext == newEditContext)
+            {
+                return;
+            }
+            if (EditContext != null)
+                EditContext.OnValidationStateChanged -= EditContextOnOnValidationStateChanged;
+            if (newEditContext != null)
+            {
+                newEditContext.OnValidationStateChanged += EditContextOnOnValidationStateChanged;
+            }
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        while (_renderActions.Any())
+        {
+            await _renderActions.Dequeue().Invoke();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private void EditContextOnOnValidationStateChanged(object sender, ValidationStateChangedEventArgs e)
+    {
+        _renderActions.Enqueue(async () =>
+        {
+            var errors = GetValidationMessages()?.Any() is true;
+            await _jsRuntime.InvokeVoidAsync("IonicBridge.executeFunctionByName", _element, "classList.toggle", "ion-invalid", errors);
+        });
+    }
+
+    private EditContext _editContext;
+
+    protected Action<EditContext> EditContextChanging;
+    private FieldIdentifier? _validationFieldIdentifier;
+    private Expression<Func<object>> _validationField;
+    private EditContext _cascadingEditContext;
+
+    [Parameter]
+    public EditContext EditContext
+    {
+        get => _editContext ?? CascadingEditContext;
+        set
+        {
+            EditContextChanging?.Invoke(value);
+            _editContext = value;
+        }
+    }
+
+    [CascadingParameter]
+    public EditContext CascadingEditContext
+    {
+        get => _cascadingEditContext;
+        set
+        {
+            EditContextChanging?.Invoke(value);
+            _cascadingEditContext = value;
+        }
+    }
+
+    [Parameter]
+    public FieldIdentifier? ValidationFieldIdentifier
+    {
+        get => _validationFieldIdentifier ?? CascadingValidationFieldIdentifier ??
+               (ValidationField is null ? null : FieldIdentifier.Create(ValidationField));
+        set => _validationFieldIdentifier = value;
+    }
+
+    [CascadingParameter(Name = nameof(ValidationFieldIdentifier))]
+    public FieldIdentifier? CascadingValidationFieldIdentifier { get; set; }
+
+    [Parameter]
+    public Expression<Func<object>> ValidationField
+    {
+        get => _validationField ?? CascadingValidationField;
+        set => _validationField = value;
+    }
+
+    [CascadingParameter(Name = nameof(ValidationField))]
+    public Expression<Func<object>> CascadingValidationField { get; set; }
+
+    public void NotifyFieldChanged()
+    {
+        if (EditContext != null && ValidationFieldIdentifier != null)
+        {
+            EditContext.NotifyFieldChanged(ValidationFieldIdentifier.Value);
+        }
+    }
+
+    public string[] GetValidationMessages()
+    {
+        if (EditContext != null && ValidationFieldIdentifier != null)
+        {
+            return EditContext.GetValidationMessages(ValidationFieldIdentifier.Value)?.ToArray();
+        }
+
+        return null;
+    }
+
+}

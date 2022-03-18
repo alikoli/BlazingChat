@@ -1,0 +1,56 @@
+@page "/assignroles"
+
+@inject IAssignRolesViewModel _assignRolesViewModel
+@inject IToastService _toastService
+@inject UIStateService UiStateService
+@attribute [Authorize(Roles = "admin")]
+
+<IonContent fullscreen>
+    <IonToolbar>
+        <IonSearchBar ValueChanged="OnSearch" showCancelButton="focus" placeholder="Filter Users" autocorrect="on"></IonSearchBar>
+    </IonToolbar>
+    <IonList>
+        @if (_assignRolesViewModel.AllUsers?.Any() ?? false)
+        {
+            foreach (var user in _assignRolesViewModel.FilteredUsers)
+            {
+                <IonItem>
+                    <IonLabel>@user.EmailAddress</IonLabel>
+                    <IonSelect TItem="string" id="@user.UserId" value=@($"{user.Role}#{user.UserId}") ValueChanged="AssignRole" interface="action-sheet">
+                        <IonSelectOption value=@($"#{user.UserId}")>None</IonSelectOption>
+                        <IonSelectOption value=@($"admin#{user.UserId}")>Admin</IonSelectOption>
+                        <IonSelectOption value=@($"general#{user.UserId}") selected="true">General</IonSelectOption>
+                    </IonSelect>
+                    <IonButton @onclick="@(() => DeleteUser(user.UserId))" color="danger">Delete</IonButton>
+                </IonItem>
+            }
+        }
+    </IonList>
+</IonContent>
+
+@code {
+
+    private void OnSearch(string searchString)
+    {
+        _assignRolesViewModel.SearchString = searchString;
+    }
+
+    private async Task AssignRole(string value)
+    {
+        var selectedValues = (value?.ToString() ?? "").Split('#');
+        await _assignRolesViewModel.AssignRole(Convert.ToInt64(selectedValues[1]), selectedValues[0]);  
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        UiStateService.Title = "Assign Roles";
+        await _assignRolesViewModel.LoadAllUsers();
+    }
+
+
+    private async Task DeleteUser(long userId)
+    {
+        await _assignRolesViewModel.DeleteUser(userId);
+    }
+
+}

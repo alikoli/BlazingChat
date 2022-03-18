@@ -1,0 +1,14 @@
+@using Microsoft.JSInterop
+@inherits BaseIonicPresentableComponent<object, Blazor.Ionic.Models.OverlayEventDetail<Blazor.Ionic.Models.IonicComponentDismissPayloadData>>
+@namespace Blazor.Ionic
+@code {
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> InputAttributes { get; set; }
+
+    protected override async Task CreateElement()
+    {
+        await JsRuntime.InvokeVoidAsync("IonicBridge.createElement", "ion-loading", Id, InputAttributes);
+        await JsRuntime.InvokeVoidAsync("IonicBridge.registerBlazorCustomHandler", Id, "ionLoadingDidDismiss", ThisRef, nameof(HandleDismissed));
+        await JsRuntime.InvokeVoidAsync("IonicBridge.registerBlazorCustomHandler", Id, "ionLoadingDidPresent", ThisRef, nameof(HandlePresented));
+    }
+}

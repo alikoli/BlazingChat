@@ -1,0 +1,9 @@
+﻿@if (ToastList.Any())
+{
+    <CascadingValue Value=this>
+        @foreach (var toast in ToastList.OrderBy(x => x.TimeStamp))
+    {
+        <IonicToast @key="toast" ToastSettings="toast.ToastSettings" ToastId="toast.Id" Timeout="Timeout" />
+    }
+    </CascadingValue>
+}

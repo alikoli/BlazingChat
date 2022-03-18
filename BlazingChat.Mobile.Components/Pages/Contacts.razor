@@ -1,0 +1,94 @@
+@page "/contacts"
+
+@inject IContactsViewModel _contactsViewModel
+@inject NavigationManager _navigationManager
+@inject UIStateService UiStateService
+
+<ActivateMessage></ActivateMessage>
+
+<IonContent fullscreen>
+    <IonToolbar>
+        <IonSearchBar ValueChanged="OnSearch" showCancelButton="focus" placeholder="Filter Contacts" autocorrect="on"></IonSearchBar>
+    </IonToolbar>
+
+    @if (_contactsViewModel.ContactsCount > 0)
+    {
+        <IonList>
+            <Virtualize @ref="_contactsContainer" Context="contact" ItemsProvider="LoadOnlyVisibleContacts">
+                <ItemContent>
+
+                    <IonItem href="@GetUrl(contact.ContactId)">
+                        <IonLabel>
+                            @if (contact.FirstName != null)
+                        {
+                            @string.Format("{0} {1}", contact.FirstName, contact.LastName)
+                        }
+                        else
+                        {
+                            @contact.EmailAddress
+                        }
+                    </IonLabel>
+                </IonItem>
+
+            </ItemContent>
+            <Placeholder>
+                <IonItem>
+                    <IonButton expand="full" color="secondary">Loading...</IonButton>
+                </IonItem>
+            </Placeholder>
+        </Virtualize>
+    </IonList>
+    }
+    </IonContent>
+
+    @code {
+    private Virtualize<Contact>? _contactsContainer;
+
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; }
+
+    [CascadingParameter]
+    public Error Error { get; set; }
+
+    private async Task OnSearch(string searchString)
+    {
+        _contactsViewModel.SearchString = searchString;
+        await _contactsContainer?.RefreshDataAsync();
+        StateHasChanged();
+    }
+
+    private string GetUrl(int contactId)
+    {
+        return $"/chat/{contactId}";
+    }
+
+    private async ValueTask<ItemsProviderResult<Contact>> LoadOnlyVisibleContacts(ItemsProviderRequest itemsProviderRequest)
+    {
+        await _contactsViewModel.LoadOnlyVisibleContactsDB(itemsProviderRequest.StartIndex, itemsProviderRequest.Count);
+        return new ItemsProviderResult<Contact>(_contactsViewModel.Contacts, _contactsViewModel.ContactsCount);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        UiStateService.Title = "Contacts";
+        try
+        {
+            var authState = await AuthenticationState;
+
+            if (authState.User.Identity is { IsAuthenticated: true })
+            {
+                await _contactsViewModel.LoadContactsCountDB();
+            }
+            else _navigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            await Error.ProcessError(ex);
+        }
+    }
+
+    private void NavigateToChat()
+    {
+        _navigationManager.NavigateTo("/chat");
+    }
+    }

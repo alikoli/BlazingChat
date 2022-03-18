@@ -1,0 +1,98 @@
+﻿@using System.Security.Claims
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject UIStateService StateService
+
+@inject NavigationManager _navigationManager
+@inject ILoginViewModel _loginViewModel
+@inject IProfileViewModel _profileViewModel
+@inject IJSRuntime _jsRuntime
+@inject IAccessTokenService _accessTokenService
+<div class="app-wrapper dark">
+    <IonSplitPane when="sm" content-id="main-content">
+        <AuthorizeView>
+            <Authorized>
+                <IonMenu content-id="main-content">
+                    <NavMenu />
+                </IonMenu>
+            </Authorized>
+        </AuthorizeView>
+
+        <div class="ion-page" id="main-content">
+            <IonHeader>
+                <IonToolbar>
+                    <IonButtons slot="start">
+                        <IonMenuButton></IonMenuButton>
+                    </IonButtons>
+                    <IonButtons slot="primary">
+                        <AuthorizeView>
+                            <Authorized>
+                               @* <IonLabel>@context.User?.Identity?.Name</IonLabel>*@
+                                <IonButton class="btn btn-danger" @onclick="LogoutUser">
+                                    <IonIcon slot="icon-only" name="log-out" />
+                                </IonButton>
+                            </Authorized>
+                        </AuthorizeView>
+                    </IonButtons>
+                    <IonTitle>@StateService.Title</IonTitle>
+                </IonToolbar>
+            </IonHeader>
+            @Body
+
+        </div>
+
+
+        <IonicToasts Position="ToastPosition.Bottom"
+                     Timeout="2"
+                     SuccessIcon="thumbs-up"
+                     InfoIcon="information-circle"
+                     WarningIcon="warning"
+                     ErrorIcon="alert-circle" />
+
+    </IonSplitPane>
+
+</div>
+
+@code {
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+        //if(firstRender)
+        {
+            var jwtToken = await _accessTokenService.GetAccessTokenAsync("jwt_token");
+            if (jwtToken == null) return;
+
+            jwtToken = $@"""{jwtToken}""";
+            User currentUser = await _loginViewModel.GetUserByJWTAsync(jwtToken);
+
+            if (currentUser != null)
+            {
+                //setting the themeName parameter for JS function
+                var themeName = currentUser.DarkTheme == 1 ? "dark" : "light";
+                //calling the JS function
+                var module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazingChat.Mobile.Components/js/site.js");
+                await module.InvokeVoidAsync("setTheme", themeName);
+            }
+        }
+
+        if (firstRender)
+            StateService.StateChanged += OnStateServiceOnStateChanged;
+    }
+
+    private async Task LogoutUser()
+    {
+        await _accessTokenService.RemoveAccessTokenAsync("jwt_token");
+        _navigationManager.NavigateTo("/", true);
+    }
+
+    private void OnStateServiceOnStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        StateService.StateChanged -= OnStateServiceOnStateChanged;
+    }
+}

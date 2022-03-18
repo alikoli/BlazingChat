@@ -1,0 +1,90 @@
+@using System.Text.Json.Serialization
+@using Microsoft.JSInterop
+@namespace Blazor.Ionic
+@inherits BaseIonicInputComponent<IEnumerable<TItem>, IonMultipleSelect<TItem>.InputChangeEventDetail>
+@typeparam TItem
+<ion-select multiple="true" @attributes="InputAttributes" @ref="Element">
+    @if (Options is null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        foreach (var option in Options)
+        {
+            <ion-select-option value="@GetOptionIdentifier(option)">@GetOptionText(option)</ion-select-option>
+        }
+    }
+</ion-select>
+
+@code {
+
+    private readonly Queue<Func<Task>> _renderActions = new Queue<Func<Task>>();
+    [Parameter]
+    public IEnumerable<TItem> Options { get; set; }
+
+    protected override void SetValue(IEnumerable<TItem> value)
+    {
+        JsRuntime.InvokeVoidAsync("IonicBridge.setWebComponentProperty", Element, $"value", value?.Select(GetOptionIdentifier));
+        base.SetValue(value);
+    }
+
+    [Parameter]
+    public Func<TItem, string> GetOptionIdentifier { get; set; } = arg =>
+    {
+        if (arg is string s)
+        {
+            return s;
+        }
+        if (arg is null)
+        {
+            return null;
+        }
+        return arg.GetHashCode().ToString();
+    };
+
+    [Parameter]
+    public Func<TItem, string> GetOptionText { get; set; } = (arg1) => arg1?.ToString();
+
+    protected override bool Compare(IEnumerable<TItem> a, IEnumerable<TItem> b)
+    {
+        var aIdentifiers = a?.Select(GetOptionIdentifier);
+        var bIdentifiers = b?.Select(GetOptionIdentifier);
+        var aIdentifiersCount = aIdentifiers?.Count() ?? 0;
+        var bIdentifiersCount = bIdentifiers?.Count() ?? 0;
+        if (aIdentifiersCount == bIdentifiersCount && bIdentifiersCount == 0)
+        {
+            return true;
+        }
+        return (aIdentifiersCount == bIdentifiersCount && (!aIdentifiers.Except(bIdentifiers).Any() || !bIdentifiers.Except(aIdentifiers).Any()));
+    }
+
+    protected override Task HandleChangeCore(InputChangeEventDetail detail)
+    {
+        detail.Options = Options?.ToDictionary(GetOptionIdentifier, arg => arg);
+        return base.HandleChangeCore(detail);
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        while (_renderActions.Any())
+        {
+            await _renderActions.Dequeue().Invoke();
+        }
+    }
+    public class InputChangeEventDetail : BaseIonicChangeEventDetail<IEnumerable<TItem>>
+    {
+        [JsonPropertyName("value")]
+        public string[] Value { get; set; }
+
+        [JsonIgnore]
+        public Dictionary<string, TItem> Options { get; set; }
+
+        public override IEnumerable<TItem> GetValue()
+        {
+            return Options?.Where(pair => Value?.Contains(pair.Key) is true).Select(pair => pair.Value).ToArray() ?? Array.Empty<TItem>();
+        }
+    }
+
+}

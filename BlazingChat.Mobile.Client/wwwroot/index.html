@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BlazingChat2</title>
+    <base href="/" />
+    <link href="manifest.json" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+
+    <!--<link href="_content/BlazingChat.Mobile.Components/css/app.css" rel="stylesheet" />
+    <link href="_content/BlazingChat.Mobile.Components/css/app-light.css" rel="stylesheet" id="theme" />-->
+    <link href="BlazingChat.Mobile.Client.styles.css" rel="stylesheet" />
+
+    <link href="_content/Radzen.Blazor/css/default-base.css" rel="stylesheet">
+    <link href="_content/BlazorPro.Spinkit/spinkit.min.css" rel="stylesheet" />
+
+    <!--<script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />--> 
+
+
+    <script type="module" src="_content/BlazingChat.Mobile.Components/js/ionic/ionic.esm.js"></script>
+    <script nomodule src="_content/BlazingChat.Mobile.Components/js/ionic/ionic.js"></script>
+    <link href="_content/BlazingChat.Mobile.Components/css/ionic/ionic.bundle.css" rel="stylesheet" />
+
+    <script src="_content/BlazorIonic/ionic-bridge.js"></script>
+    <style>
+        :root {
+            --ion-safe-area-top: 20px;
+            --ion-safe-area-bottom: 22px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div class="d-flex justify-content-center flex-column vh-100">
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border text-info" style="width: 5rem; height: 5rem;" role="status" />
+            </div>
+        </div>
+    </div>
+    
+    <div id="blazor-error-ui" style="display: none; width:100%; left:0; z-index:1000; position:fixed; padding: 0.6rem 1.25rem 0.7rem 1.25rem; ">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,193 @@
+﻿@page "/chat"
+@page "/chat/{ToUserId}"
+
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.Options
+
+@inject NavigationManager _navigationManager
+@inject IJSRuntime _jsRuntime
+@inject HttpClient _httpClient
+@inject IAccessTokenService _accessTokenService
+@inject ILoginViewModel _loginViewModel
+@inject IProfileViewModel _profileViewModel
+@inject IOptions<ApplicationSettings> _applicationSettings
+@inject UIStateService UiStateService
+
+
+@attribute [Authorize(Roles = "admin, general")]
+
+
+
+    @if (ToUser != null)
+{
+<IonList>
+        <IonItem>
+            <IonAvatar class="ion-margin-end">
+                <img src="@_profileViewModel.ProfilePicDataUrl" alt="User Profile Picture"/>
+            </IonAvatar>
+            <IonLabel>
+                @if (ToUser.FirstName != null || ToUser.LastName != null)
+                {
+                    @string.Format("{0} {1}", ToUser.FirstName, ToUser.LastName)
+                }
+                else
+                {
+                    @ToUser.EmailAddress
+                }
+            </IonLabel>
+            <IonBadge slot="end">@Messages.Count</IonBadge>
+        </IonItem>
+</IonList>
+
+}
+
+<IonContent padding="true">
+
+
+    <div id="divMessageContainerBase" class="msg_container_base">
+
+        @if (Messages?.Any() ?? false)
+        {
+            @foreach (var message in Messages)
+            {
+                @if (message.FromUserId == FromUserId)
+                {
+                    <div class="messages msg_container">
+                        <div class="message">
+                            <span>@message.MessageText</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="messages other msg_container">
+                        <div class="message">
+                            <span>@message.MessageText</span>
+                        </div>
+                    </div>
+                }
+            }
+        }
+    </div>
+
+
+</IonContent>
+
+<IonFooter collapse="fade">
+    <IonToolbar>
+        <IonInput id="txtMessageInput"
+                  @bind-Value="MessageText"
+                  type="text"
+                  placeholder="Write your message here..."
+                  @onkeydown="OnKeyDownEvent" />
+
+        <IonButtons slot="end">
+            <IonButton OnClick="InvokeSendMessage">
+                <IonIcon name="send"></IonIcon>
+            </IonButton>
+        </IonButtons>
+
+    </IonToolbar>
+</IonFooter>
+
+@code {
+    [Parameter]
+    public string ToUserId { get; set; } = string.Empty;
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthenticationState { get; set; } = null!;
+
+    private User ToUser { get; set; } = new();
+    private string FromUserId { get; set; } = string.Empty;
+    private string MessageText { get; set; } = string.Empty;
+    private List<Message> Messages { get; } = new();
+    private HubConnection _hubConnection = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        UiStateService.Title = "Chat";
+
+        var claimsPrincipal = (await AuthenticationState).User;
+
+        if (claimsPrincipal.Identity is not { IsAuthenticated: true })
+            _navigationManager.NavigateTo("/");
+
+        var jwtToken = await _accessTokenService.GetAccessTokenAsync("jwt_token");
+        if (jwtToken == null) return;
+
+        jwtToken = $@"""{jwtToken}""";
+        FromUserId = (await _loginViewModel.GetUserByJWTAsync(jwtToken)).UserId.ToString();
+
+        if (Convert.ToInt32(ToUserId) > 0)
+        {
+            _profileViewModel.UserId = Convert.ToInt64(ToUserId);
+            await _profileViewModel.GetProfile();
+            ToUser = new User
+                {
+                    FirstName = _profileViewModel.FirstName,
+                    LastName = _profileViewModel.LastName,
+                    EmailAddress = _profileViewModel.EmailAddress,
+                };
+
+            if (_profileViewModel.ProfilePicDataUrl == null)
+            {
+                _profileViewModel.ProfilePicDataUrl = "_content/BlazingChat.Mobile.Components/img/profile_pic.jpg";
+                Console.WriteLine(_profileViewModel.ProfilePicDataUrl);
+            }
+        }
+
+        var baseAddress = _applicationSettings.Value.BaseAddress;
+
+        _hubConnection = new HubConnectionBuilder()
+                            .WithUrl($"{baseAddress}chathub")
+                            .Build();
+
+        _hubConnection.On<Message>("ReceiveMessage", message =>
+        {
+            if (message.FromUserId == FromUserId ||
+            (message.ToUserId == FromUserId && message.FromUserId == ToUserId))
+            {
+                Messages.Add(message);
+                StateHasChanged();
+            }
+        });
+
+        await _hubConnection.StartAsync();
+    }
+
+    private async Task OnKeyDownEvent(KeyboardEventArgs eventArgs)
+    {
+        if (eventArgs.Code == "Enter" || eventArgs.Code == "NumpadEnter")
+        {
+            await InvokeSendMessage();
+        }
+    }
+    private async Task InvokeSendMessage()
+    {
+        var module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazingChat.Mobile.Components/js/site.js");
+        var messageToBeSent = await module.InvokeAsync<string>("getMessageInput");
+        await Send(messageToBeSent);
+    }
+
+    public async Task Send(string messageText)
+    {
+        if (messageText.Length > 0)
+        {
+            Message message = new Message();
+            message.ToUserId = ToUserId;
+            message.FromUserId = FromUserId;
+            message.MessageText = MessageText;
+
+            await _hubConnection.SendAsync("SendMessage", message);
+            MessageText = "";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var module = await _jsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazingChat.Mobile.Components/js/site.js");
+        await module.InvokeVoidAsync("setScroll");
+
+        Console.WriteLine("set scroll");
+    }
+}
