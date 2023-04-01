@@ -1,7 +1,7 @@
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 
-#region ConfigureServices
+#region ConfigureServicesTest
 
 // setting client host environment 
 builder.Services.AddSingleton<IHostingEnvironment>(
